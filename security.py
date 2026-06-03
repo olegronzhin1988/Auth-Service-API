@@ -13,7 +13,7 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def create_access_toker(data: dict) ->str:
+def create_access_token(data: dict) ->str:
     expire = datetime.now(UTC) + timedelta(minutes=stngs.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode({**data, "exp":expire}, stngs.JWT_SECRET_KEY, stngs.JWT_ALGORITHM)
 
