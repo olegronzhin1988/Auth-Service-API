@@ -13,7 +13,8 @@ import security as scrty
 import redis.asyncio as redis
 from config import Settings as stngs
 import services.auth_service as au_srvc
-
+from dependencies import get_current_user
+from fastapi.security import HTTPAutorizationCredentials
 # Authentification router
 auth_router = APIRouter(prefix="/auth",
                         tags=["Authentification", "Users", "Tokens"])
@@ -30,25 +31,39 @@ async def user_register(session:SessionDep,
     new_user = au_srvc.user_register(SessionDep, user_in)
 
 # Calling service create tokens function
-    access_token, refresh_token = au_srvc.create_tokens(new_user)
+    access_token, refresh_token = au_srvc.tokens_create(new_user)
         
 # Returning tokens
     return SToken(access_token = access_token, 
                   refresh_token = refresh_token)
 
-# Email+password authentification
+# Email+password login/authentification
 @auth_router.post("/login",
                   status_code=status.HTTP_200_OK,
-                  description="Authentification via email and password")
+                  description="Login/authentification via email and password")
 async def user_login(session:SessionDep,
-                     user_login = SUserLogin) -> SToken:    
-# Creating dict for a login user
-    user_dict = user_login.model_dump()
+                     user_login: SUserLogin) -> SToken:    
+# Calling serivice user login function
+    au_srvc.user_login(SessionDep, user_login)
 
-# Check there is no user with such name or email
-    conditions =[]
-    conditions.append(UsersModel.hashed_password == hash_password(user_dict["password"]))
-    conditions.append(UsersModel.email == user_dict['email'])
-    query = select(UsersModel).where(*conditions)
-    result = await session.execute(query)
-    user_found = result.scalar_one_or_none()
+# Calling service create tokens function
+    access_token, refresh_token = au_srvc.tokens_create(user_login)
+        
+# Returning tokens
+    return SToken(access_token = access_token, 
+                  refresh_token = refresh_token)
+
+# User logout, invalidates user tokens, requires authorization
+@auth_router.post("/logout",
+                  status_code=status.HTTP_200_OK,
+                  description="User logout with tokens invalidation, authorization needed")
+async def user_logout(token_data: SRefreshTokenRequest,
+                      current_user:Depends(get_current_user),
+                      credentials: HTTPAutorizationCredentials = Depends(bearer)):
+
+    access_token = credentials.credentials
+    await au_srvc.user_logout(access_token,
+                              token_data.refresh_token, 
+                              current_user)
+    
+    return {"message" :"Logged out successfully"}

@@ -19,7 +19,7 @@ redis_client = redis.Redis(host=stngs.REDIS_HOST,
 bearer = HTTPBearer()
 
 async def get_current_user(session: SessionDep,
-                           credentials: HTTPAutorizationCredentials = depends(bearer)) -> UsersModel:
+                           credentials: HTTPAutorizationCredentials = Depends(bearer)) -> UsersModel:
     token = credentials.credentials
 
     if await redis_client.get(f"blacklist:{token}"):
@@ -42,7 +42,7 @@ async def get_current_user(session: SessionDep,
     return user
 
 def require_role(role:str):
-    def checker(durrent_user: UsersModel = Depends(get_current_user)) -> UsersModel:
+    def checker(current_user: UsersModel = Depends(get_current_user)) -> UsersModel:
         if get_current_user.role != role:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Insufficient permissions")

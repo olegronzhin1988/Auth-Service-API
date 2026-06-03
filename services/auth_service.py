@@ -12,6 +12,7 @@ from config import Settings as stngs
 import security as scrty
 import redis.asyncio as redis
 
+# User register service function
 async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
 # Creating dict for a new user registration
     user_dict = user_in.model_dump()
@@ -28,11 +29,11 @@ async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
 # Exception if there is any
     if user_found:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail =f"User with username {user_dict["username"]} and/or email {user_dict['email']} already exists")
+                            detail=f"User with username {user_dict["username"]} and/or email {user_dict['email']} already exists")
 
 # Registrating user
     else:
-        user_dict["hashed_password"] = hash_password(user_dict["password"])
+        user_dict["hashed_password"] = scrty.hash_password(user_dict["password"])
         del user_dict["password"]
         user_dict["created_at"] = datetime.now()
         new_user = UsersModel(**user_dict)
@@ -42,8 +43,9 @@ async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
 
 # Returning registrated user to router
         return new_user
-    
-async def create_tokens(user:UsersModel):
+
+# Create access and refresh tokens function
+async def tokens_create(user:UsersModel):
 # Creating tokens
     access_token = scrty.create_access_token({"sub":str(user.id)})
     refresh_token = scrty.create_refresh_token({"sub":str(user.id)})
@@ -53,5 +55,31 @@ async def create_tokens(user:UsersModel):
         f"refresh{user.id}",
         stngs.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         refresh_token)
-
+# Returning created tokens
     return access_token, refresh_token
+
+# Login via email and password function
+async def user_login(session: AsyncSession, user_in:SUserLogin) -> None:
+
+# Check there is no user with such name or email
+    query = select(UsersModel).where(UsersModel.email == user_in.email)
+    result = await session.execute(query)
+    user_found = result.scalar_one_or_none()
+
+    if not user_found or not scrty.verify_password(user_in.password, user_found.hashed_password):
+        raise HTTPException(status=status.HTTP_401_UNAUTHORIZED,
+                            detai="Incorrect email or password")
+    else:
+        if not user_found.is_active:
+            raise HTTPException(status=status.HTTP_403_FORBIDDEN,
+                                detail="Account deactivated")
+
+# User Logout 
+async def user_logout(access_token:str,
+                      refresh_token:str,
+                      user_in:UsersModel) -> None:
+# Add access token to blacklist
+    await redis.redis_client.setex(f"blacklist:{access_token}",
+                                   stngs.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                                   "1")
+    await redis.redis_client.delete(f"refresh:{user_in.id}")
