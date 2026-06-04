@@ -1,6 +1,6 @@
 # auth.py router file. Contains router & endpoints for authentification
 
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, Depends
 from database import SessionDep
 from schemas.users import SUserBase, SUserLogin, SUserReg, SUserResponse, SUserUpdate
 from schemas.tokens import SAccessToken, SRefreshTokenRequest, SToken
@@ -13,7 +13,7 @@ import security as scrty
 import redis.asyncio as redis
 from config import Settings as stngs
 import services.auth_service as au_srvc
-from dependencies import get_current_user
+from dependencies import get_current_user, bearer
 from fastapi.security import HTTPAutorizationCredentials
 # Authentification router
 auth_router = APIRouter(prefix="/auth",
@@ -25,7 +25,7 @@ auth_router = APIRouter(prefix="/auth",
                   status_code=status.HTTP_201_CREATED,
                   description="Register new user")
 async def user_register(session:SessionDep,
-                       user_in: SUserReg) -> SToken:
+                        user_in: SUserReg) -> SToken:
 
 # Calling service user register function     
     new_user = au_srvc.user_register(SessionDep, user_in)
@@ -58,12 +58,24 @@ async def user_login(session:SessionDep,
                   status_code=status.HTTP_200_OK,
                   description="User logout with tokens invalidation, authorization needed")
 async def user_logout(token_data: SRefreshTokenRequest,
-                      current_user:Depends(get_current_user),
+                      current_user:UsersModel = Depends(get_current_user),
                       credentials: HTTPAutorizationCredentials = Depends(bearer)):
-
+# Creating access token
     access_token = credentials.credentials
+
+# Calling logout service function
     await au_srvc.user_logout(access_token,
                               token_data.refresh_token, 
                               current_user)
     
     return {"message" :"Logged out successfully"}
+
+# Refresh access token via refresh token
+@auth_router.post("/refresh",
+                  status_code=status.HTTP_200_OK,
+                  description=" Refresh access token via refresh token")
+async def token_refresh(token_data:SRefreshTokenRequest) ->SAccessToken:
+# Calling service refresh function
+    access_token = await au_srvc.refresh_access_token(token_data.refresh_token)
+    return SAccessToken(access_token=access_token)
+

@@ -1,4 +1,5 @@
-# auth-service.py file, contains service functions for authentification
+# auth_service.py file, contains service functions for authentification
+# and user_register
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import status, HTTPException
@@ -83,3 +84,25 @@ async def user_logout(access_token:str,
                                    stngs.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                                    "1")
     await redis.redis_client.delete(f"refresh:{user_in.id}")
+
+# refresh user access token
+async def refresh_access_token(refresh_token:str) -> str:
+# Check refresh token
+    try:
+        payload = scrty.decode_token(refresh_token)
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid refresh token")
+
+# Check if it is refresh token
+    if payload.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid token type")
+
+# Check if there is such token in Redis
+    user_id = payload.get("sub")
+    stored_token = await redis.redis_client.get(f"refresh":{user_id})
+    if not stored_token or stored_token != refresh_token:
+         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="This refresh token is revoked")
+    return scrty.create_refresh_token({"sub":user_id})

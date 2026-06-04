@@ -5,7 +5,6 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAutorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from jose import JWTError
-
 from config import settings as stngs
 from database import SessionDep
 from models.users import UsersModel
@@ -18,6 +17,7 @@ redis_client = redis.Redis(host=stngs.REDIS_HOST,
 
 bearer = HTTPBearer()
 
+# Get current user service function
 async def get_current_user(session: SessionDep,
                            credentials: HTTPAutorizationCredentials = Depends(bearer)) -> UsersModel:
     token = credentials.credentials
@@ -41,6 +41,7 @@ async def get_current_user(session: SessionDep,
 
     return user
 
+# Check current user role
 def require_role(role:str):
     def checker(current_user: UsersModel = Depends(get_current_user)) -> UsersModel:
         if get_current_user.role != role:
