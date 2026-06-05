@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import EmailStr
 from config import Settings as stngs
 import security as scrty
-import redis.asyncio as redis
+from dependencies import redis_client
 
 # User register service function
 async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
@@ -52,7 +52,7 @@ async def tokens_create(user:UsersModel):
     refresh_token = scrty.create_refresh_token({"sub":str(user.id)})
 
 # Saving refresh token to Redis
-    await redis.redis_client.setex(
+    await redis_client.setex(
         f"refresh{user.id}",
         stngs.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         refresh_token)
@@ -101,7 +101,7 @@ async def refresh_access_token(refresh_token:str) -> str:
 
 # Check if there is such token in Redis
     user_id = payload.get("sub")
-    stored_token = await redis.redis_client.get(f"refresh":{user_id})
+    stored_token = await redis_client.get(f"refresh:{user_id}")
     if not stored_token or stored_token != refresh_token:
          raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="This refresh token is revoked")

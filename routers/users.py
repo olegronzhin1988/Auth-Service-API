@@ -42,4 +42,16 @@ async def user_list(session: SessionDep,
 async def user_change(session:SessionDep,
                       change_data:SUserUpdate,
                       current_user: UsersModel = Depends(get_current_user)) -> SUserResponse:
-    
+# Calling service user update function
+    return usr_srvc.user_update(session, change_data, current_user)
+
+# delete user via id, admin only
+@users_router.delete("/{user_id}",
+                     status_code=status.HTTP_200_OK,
+                     description="Change curent user`s username or email")
+async def user_delete(user_id:int,
+                      session:SessionDep,
+                      current_user:UsersModel = Depends(require_role("admin"))):
+# Calling service user delete function
+    await usr_srvc.user_delete(session, user_id)
+    return {"message": f"User {user_id} deleted successfully"}

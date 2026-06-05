@@ -1,8 +1,7 @@
 # users.py schemas file, contain user schemas
 
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, model_validator
 from datetime import datetime
-from security import create_access_toker
 
 # Base User schema
 class SUserBase(BaseModel):
@@ -48,6 +47,13 @@ class SUserUpdate(BaseModel):
     email:EmailStr|None = Field(default=None,
                            title="New user email",
                            description="New user email address, for update")
+
+# Validator to check that class object is not empty
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "SUserUpdate":
+        if not self.username and not self.username:
+            raise ValueError("No changes were given, provide at least one")
+        return self
 
 # User schema, used for response
 class SUserResponse(SUserBase):
