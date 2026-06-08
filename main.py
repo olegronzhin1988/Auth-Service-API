@@ -2,16 +2,18 @@
 import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from database import engine, modulel
-from config import Settings
+from database import engine, Model
+from config import settings
+from routers.auth import auth_router
+from routers.users import users_router
 
 # Decorated lifespan function, activates database connection
 # on app/server launch
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(f"Connected to {Settings.POSTGRES_DB}")
+    print(f"Connected to {settings.POSTGRES_DB}")
     yield
-    print(f"Disconnected to {Settings.POSTGRES_DB}")
+    print(f"Disconnected to {settings.POSTGRES_DB}")
 
 # Creating app
 app = FastAPI(lifespan = lifespan,
@@ -20,7 +22,8 @@ app = FastAPI(lifespan = lifespan,
               version = '1.0.0')
 
 # Connecting routers
-
+app.include_router(auth_router)
+app.include_router(users_router)
 
 # Default wellcome root GET endpoint
 @app.get("/")

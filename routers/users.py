@@ -4,13 +4,6 @@ from fastapi import APIRouter, status, Depends
 from database import SessionDep
 from schemas.users import SUserBase, SUserLogin, SUserReg, SUserResponse, SUserUpdate
 from models.users import UsersModel
-from sqlalchemy import select, update
-from datetime import datetime
-from typing import Optional
-from pydantic import EmailStr
-import security as scrty
-import redis.asyncio as redis
-from config import Settings as stngs
 import services.users_service as usr_srvc
 from dependencies import get_current_user, require_role
 
@@ -43,7 +36,7 @@ async def user_change(session:SessionDep,
                       change_data:SUserUpdate,
                       current_user: UsersModel = Depends(get_current_user)) -> SUserResponse:
 # Calling service user update function
-    return usr_srvc.user_update(session, change_data, current_user)
+    return await usr_srvc.user_update(session, change_data, current_user)
 
 # delete user via id, admin only
 @users_router.delete("/{user_id}",

@@ -5,16 +5,9 @@ from database import SessionDep
 from schemas.users import SUserBase, SUserLogin, SUserReg, SUserResponse, SUserUpdate
 from schemas.tokens import SAccessToken, SRefreshTokenRequest, SToken
 from models.users import UsersModel
-from sqlalchemy import select, update
-from datetime import datetime
-from typing import Optional
-from pydantic import EmailStr
-import security as scrty
-import redis.asyncio as redis
-from config import Settings as stngs
 import services.auth_service as au_srvc
 from dependencies import get_current_user, bearer
-from fastapi.security import HTTPAutorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials
 # Authentification router
 auth_router = APIRouter(prefix="/auth",
                         tags=["Authentification", "Users", "Tokens"])
@@ -28,10 +21,10 @@ async def user_register(session:SessionDep,
                         user_in: SUserReg) -> SToken:
 
 # Calling service user register function     
-    new_user = au_srvc.user_register(SessionDep, user_in)
+    new_user = await au_srvc.user_register(session, user_in)
 
 # Calling service create tokens function
-    access_token, refresh_token = au_srvc.tokens_create(new_user)
+    access_token, refresh_token = await au_srvc.tokens_create(new_user)
         
 # Returning tokens
     return SToken(access_token = access_token, 
@@ -44,10 +37,10 @@ async def user_register(session:SessionDep,
 async def user_login(session:SessionDep,
                      user_login: SUserLogin) -> SToken:    
 # Calling serivice user login function
-    au_srvc.user_login(SessionDep, user_login)
+    user = await au_srvc.user_login(session, user_login)
 
 # Calling service create tokens function
-    access_token, refresh_token = au_srvc.tokens_create(user_login)
+    access_token, refresh_token = await au_srvc.tokens_create(user)
         
 # Returning tokens
     return SToken(access_token = access_token, 
@@ -59,7 +52,7 @@ async def user_login(session:SessionDep,
                   description="User logout with tokens invalidation, authorization needed")
 async def user_logout(token_data: SRefreshTokenRequest,
                       current_user:UsersModel = Depends(get_current_user),
-                      credentials: HTTPAutorizationCredentials = Depends(bearer)):
+                      credentials: HTTPAuthorizationCredentials = Depends(bearer)):
 # Creating access token
     access_token = credentials.credentials
 

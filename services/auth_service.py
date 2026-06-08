@@ -9,9 +9,10 @@ from sqlalchemy import select, update
 from datetime import datetime
 from typing import Optional
 from pydantic import EmailStr
-from config import Settings as stngs
+from config import settings as stngs
 import security as scrty
 from dependencies import redis_client
+from jose import JWTError
 
 # User register service function
 async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
@@ -30,7 +31,7 @@ async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
 # Exception if there is any
     if user_found:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,
-                            detail=f"User with username {user_dict["username"]} and/or email {user_dict['email']} already exists")
+                            detail=f"User with username {user_dict['username']} and/or email {user_dict['email']} already exists")
 
 # Registrating user
     else:
@@ -53,37 +54,42 @@ async def tokens_create(user:UsersModel):
 
 # Saving refresh token to Redis
     await redis_client.setex(
-        f"refresh{user.id}",
+        f"refresh:{user.id}",
         stngs.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
         refresh_token)
 # Returning created tokens
     return access_token, refresh_token
 
 # Login via email and password function
-async def user_login(session: AsyncSession, user_in:SUserLogin) -> None:
+async def user_login(session: AsyncSession, user_in:SUserLogin) -> UsersModel:
 
 # Check there is no user with such name or email
     query = select(UsersModel).where(UsersModel.email == user_in.email)
     result = await session.execute(query)
     user_found = result.scalar_one_or_none()
 
+# Incorrect login data
     if not user_found or not scrty.verify_password(user_in.password, user_found.hashed_password):
-        raise HTTPException(status=status.HTTP_401_UNAUTHORIZED,
-                            detai="Incorrect email or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Incorrect email or password")
+
+# User deactivated
     else:
         if not user_found.is_active:
-            raise HTTPException(status=status.HTTP_403_FORBIDDEN,
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                                 detail="Account deactivated")
+
+        return user_found
 
 # User Logout 
 async def user_logout(access_token:str,
                       refresh_token:str,
                       user_in:UsersModel) -> None:
 # Add access token to blacklist
-    await redis.redis_client.setex(f"blacklist:{access_token}",
+    await redis_client.setex(f"blacklist:{access_token}",
                                    stngs.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                                    "1")
-    await redis.redis_client.delete(f"refresh:{user_in.id}")
+    await redis_client.delete(f"refresh:{user_in.id}")
 
 # refresh user access token
 async def refresh_access_token(refresh_token:str) -> str:
@@ -105,4 +111,4 @@ async def refresh_access_token(refresh_token:str) -> str:
     if not stored_token or stored_token != refresh_token:
          raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="This refresh token is revoked")
-    return scrty.create_refresh_token({"sub":user_id})
+    return scrty.create_access_token({"sub":user_id})

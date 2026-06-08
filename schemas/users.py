@@ -16,7 +16,7 @@ class SUserBase(BaseModel):
                            description="User email address, given at registration, used to log in")
     
 # Pydantic Model setting, to work with ORM
-    model_config = ConfigDict(from_arrtibutes=True)
+    model_config = ConfigDict(from_attributes=True)
 
 # Register User schema
 class SUserReg(SUserBase):
@@ -51,7 +51,7 @@ class SUserUpdate(BaseModel):
 # Validator to check that class object is not empty
     @model_validator(mode="after")
     def at_least_one_field(self) -> "SUserUpdate":
-        if not self.username and not self.username:
+        if not self.username and not self.email:
             raise ValueError("No changes were given, provide at least one")
         return self
 
@@ -70,7 +70,7 @@ class SUserResponse(SUserBase):
                            title="User status",
                            description="Current user status in the system, active or not")
     
-    created_at:datetime= Field(default = datetime.now(),
+    created_at:datetime= Field(default_factory=datetime.now,
                                title="User creation date & time",
                                description="Date and time when user was added to the system")
     

@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from datetime import datetime
 from typing import Optional
 from pydantic import EmailStr
-from config import Settings as stngs
+from config import settings as stngs
 import security as scrty
 import redis.asyncio as redis
 
@@ -41,7 +41,13 @@ async def user_update(session: AsyncSession,
 
 # Update user
     else:
-        query = update(UsersModel).where(UsersModel.id == current_user.id).values(*conditions)
+        values={}
+        if change_data.username:
+            values["username"] = change_data.username
+        if change_data.email:
+            values["email"] = change_data.email
+        query = update(UsersModel).where(UsersModel.id == current_user.id).values(**values)
+        await session.execute(query)
         await session.commit()
         await session.refresh(current_user)
         return current_user
@@ -50,8 +56,7 @@ async def user_update(session: AsyncSession,
 async def user_delete(session:AsyncSession,
                       user_id: int):
 # Check that user with user_id exists in database
-    result = await session.get(UsersModel, user_id)
-    user_found = result.scalar_one_or_none()
+    user_found = await session.get(UsersModel, user_id)
 
 # Exception: no user with such id
     if not user_found:

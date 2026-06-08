@@ -15,4 +15,4 @@ class UsersModel(Model):
     hashed_password: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="user") # "user"| "admin"
     is_active: Mapped[bool] = mapped_column(default = True)
-    created_at: Mapped[datetime] = mapped_column(default = datetime.now())
+    created_at: Mapped[datetime] = mapped_column(default = datetime.now)
