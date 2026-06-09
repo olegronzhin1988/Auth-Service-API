@@ -5,7 +5,7 @@ from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
 from config import settings as stngs
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

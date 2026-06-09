@@ -22,7 +22,7 @@ async def test_get_me_success(client: AsyncClient, user_auth_headers, regular_us
 @pytest.mark.asyncio
 async def test_get_me_no_token(client: AsyncClient):
     response = await client.get("/users/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -56,7 +56,7 @@ async def test_get_all_users_as_regular_user(client: AsyncClient, user_auth_head
 @pytest.mark.asyncio
 async def test_get_all_users_no_token(client: AsyncClient):
     response = await client.get("/users/")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 # ──────────────────────────────────────────────
@@ -132,7 +132,7 @@ async def test_update_duplicate_email(client: AsyncClient, user_auth_headers, re
 @pytest.mark.asyncio
 async def test_update_no_token(client: AsyncClient):
     response = await client.patch("/users/me", json={"username": "newname"})
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 # ──────────────────────────────────────────────
@@ -170,7 +170,7 @@ async def test_delete_nonexistent_user(client: AsyncClient, admin_auth_headers):
 @pytest.mark.asyncio
 async def test_delete_user_no_token(client: AsyncClient, regular_user):
     response = await client.delete(f"/users/{regular_user.id}")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio

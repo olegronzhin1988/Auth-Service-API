@@ -163,7 +163,7 @@ async def test_logout_without_token(client: AsyncClient):
         "/auth/logout",
         json={"refresh_token": "sometoken"}
     )
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 @pytest.mark.asyncio

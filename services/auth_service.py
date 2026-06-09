@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import status, HTTPException
 from schemas.users import SUserBase, SUserLogin, SUserReg, SUserResponse, SUserUpdate
 from models.users import UsersModel
-from sqlalchemy import select, update
+from sqlalchemy import select, or_
 from datetime import datetime
 from typing import Optional
 from pydantic import EmailStr
@@ -21,10 +21,9 @@ async def user_register(session:AsyncSession, user_in:SUserReg) -> UsersModel:
     user_dict["username"] = user_dict["username"].strip()
 
 # Check there is no user with such name or email
-    conditions = []
-    conditions.append(UsersModel.username == user_dict["username"])
-    conditions.append(UsersModel.email == user_dict['email'])
-    query = select(UsersModel).where(*conditions)
+    query = select(UsersModel).where(or_(
+        UsersModel.username == user_dict["username"],
+        UsersModel.email == user_dict["email"]))
     result = await session.execute(query)
     user_found = result.scalar_one_or_none()
 
