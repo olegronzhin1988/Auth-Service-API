@@ -1,11 +1,12 @@
 # Auth Service API
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.13.9-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-8.6-DC382D?logo=redis&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-34%20passed-brightgreen?logo=pytest)
+![CI](https://github.com/olegronzhin1988/Auth-Service-API/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 A REST API for user authentication and authorization. Implements JWT access/refresh token flow with Redis-backed token storage, role-based access control, and full async stack. Built as a standalone auth service that can be integrated into any FastAPI project.
@@ -23,6 +24,7 @@ A REST API for user authentication and authorization. Implements JWT access/refr
 - Fully async stack (asyncpg + SQLAlchemy async + redis-py async)
 - Schema migrations via Alembic
 - 34 tests on SQLite in-memory — no PostgreSQL or Redis needed for testing
+- Continuous integration via GitHub Actions on every push and pull request
 
 ---
 
@@ -41,41 +43,45 @@ A REST API for user authentication and authorization. Implements JWT access/refr
 | JWT | python-jose |
 | Tests | pytest + pytest-asyncio + httpx |
 | Containers | Docker Compose |
+| CI | GitHub Actions |
 
 ---
 
 ## Project Structure
 
 ```
-├── main.py                   # FastAPI app entry point
-├── config.py                 # Settings via pydantic-settings (.env)
-├── database.py               # Engine, session, base ORM model
-├── dependencies.py           # get_current_user, require_role, Redis client
-├── security.py               # Password hashing, JWT encode/decode
-├── alembic.ini               # Alembic configuration
-├── compose.yaml              # Docker Compose: PostgreSQL + Redis
-├── pytest.ini                # pytest configuration
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # GitHub Actions CI pipeline
+├── main.py                    # FastAPI app entry point
+├── config.py                  # Settings via pydantic-settings (.env)
+├── database.py                # Engine, session, base ORM model
+├── dependencies.py            # get_current_user, require_role, Redis client
+├── security.py                # Password hashing, JWT encode/decode
+├── alembic.ini                # Alembic configuration
+├── compose.yaml                # Docker Compose: PostgreSQL + Redis
+├── pytest.ini                 # pytest configuration
 ├── requirements.txt
-├── .env.example              # Environment variable template
+├── .env.example                # Environment variable template
 ├── migrations/
 │   ├── env.py
 │   └── versions/
 │       └── *_initial_migration.py
 ├── models/
-│   └── users.py              # SQLAlchemy User model
+│   └── users.py                # SQLAlchemy User model
 ├── schemas/
-│   ├── users.py              # Pydantic user schemas
-│   └── tokens.py             # Pydantic token schemas
+│   ├── users.py                # Pydantic user schemas
+│   └── tokens.py               # Pydantic token schemas
 ├── routers/
-│   ├── auth.py               # /auth/* endpoints
-│   └── users.py              # /users/* endpoints
+│   ├── auth.py                 # /auth/* endpoints
+│   └── users.py                # /users/* endpoints
 ├── services/
-│   ├── auth_service.py       # Register, login, logout, refresh logic
-│   └── users_service.py      # List, update, delete user logic
+│   ├── auth_service.py          # Register, login, logout, refresh logic
+│   └── users_service.py         # List, update, delete user logic
 └── tests/
-    ├── conftest.py           # Fixtures, SQLite override, Redis mock
-    ├── test_auth.py          # 19 tests for /auth endpoints
-    └── test_users.py         # 15 tests for /users endpoints
+    ├── conftest.py              # Fixtures, SQLite override, Redis mock
+    ├── test_auth.py             # 19 tests for /auth endpoints
+    └── test_users.py            # 15 tests for /users endpoints
 ```
 
 ---
@@ -84,7 +90,7 @@ A REST API for user authentication and authorization. Implements JWT access/refr
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.13+
 - Docker
 
 ### 1. Clone the repository
@@ -304,6 +310,24 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 
 ---
 
+## Continuous Integration
+
+Every push and pull request to `main` automatically triggers the test suite via GitHub Actions:
+
+```
+.github/workflows/ci.yml
+```
+
+The pipeline:
+1. Checks out the code
+2. Sets up Python 3.13.9
+3. Installs dependencies from `requirements.txt`
+4. Runs the full test suite with `pytest tests/ -v`
+
+Required environment variables (PostgreSQL, Redis, JWT secret) are provided directly in the workflow — no `.env` file is needed in CI since tests run against SQLite in-memory and a mocked Redis client.
+
+---
+
 ## Known Limitations / TODO
 
 - [ ] OAuth2 social login (Google)
@@ -311,4 +335,3 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 - [ ] Password change endpoint
 - [ ] Account deactivation endpoint
 - [ ] Pagination for user list
-- [ ] GitHub Actions CI

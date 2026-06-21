@@ -1,5 +1,7 @@
 # ci.yml file, github auto actions
 
+# ci.yml file, github auto actions
+
 name: CI
 on:
   push:
@@ -17,12 +19,14 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
       POSTGRES_DB: auth
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
       JWT_SECRET_KEY: test-secret-key-32-chars-long
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13.9"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
